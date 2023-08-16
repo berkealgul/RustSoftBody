@@ -1,6 +1,6 @@
-pub mod utils;
+pub mod math;
 
-use utils::Vec3;
+use math::Vec3;
 
 fn main() {
     let p1: Vec3<f64> = Vec3 { x: 1.2, y: 3.4, z: 0.0 };

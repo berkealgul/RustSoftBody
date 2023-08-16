@@ -22,3 +22,9 @@ where
         }
     }
 }
+
+impl<T> Vec3<T> {
+    pub fn len() {
+        
+    }
+}
