@@ -15,13 +15,17 @@ impl SoftMesh  {
         }
     }    
 
-    pub fn init(&mut self)
+    pub fn init(&mut self, w:usize, h: usize)
     {
-        for i in 1..10 as i16{
-            for j in 1..10 as i16{
-                let i = f32::from(i * 10);
-                let j = f32::from(j * 10);
-                self.vertex_vec.push(Vertex { pos: Vec3 { x: i, y: j, z: 0.0 } })
+        let mut vertex_grid: Vec<Vec<Option<*mut Vertex>>> = vec![vec![None; w]; h];
+
+        for i in 1..w{
+            for j in 1..h{
+                let i_ = f32::from(i as i16 * 10);
+                let j_ = f32::from(j as i16 * 10);
+                let mut v: Vertex = Vertex { pos: Vec3 { x: i_, y: j_, z: 0.0 } };
+                self.vertex_vec.push(v);
+                vertex_grid[i][j] = Some(&mut v);
             }
         }
     }

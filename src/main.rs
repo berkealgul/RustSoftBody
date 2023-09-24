@@ -14,11 +14,12 @@ async fn main() {
         //draw_circle(screen_width() - 30.0, screen_height() - 30.0, 15.0, YELLOW);
 
         let mut mesh = SoftMesh{vertex_vec: vec!{}, edge_vec: vec!{}};
-   
+
         mesh.init();
         mesh.draw();
         draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);
 
         next_frame().await
+        
     }
 }
