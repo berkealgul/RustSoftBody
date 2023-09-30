@@ -15,7 +15,7 @@ async fn main() {
 
         let mut mesh = SoftMesh{vertex_vec: vec!{}, edge_vec: vec!{}};
 
-        mesh.init(20, 20);
+        mesh.init(5, 5);
         mesh.draw();
         draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);
 

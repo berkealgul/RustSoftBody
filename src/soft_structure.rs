@@ -10,43 +10,45 @@ pub struct SoftMesh
 
 impl SoftMesh  {
     pub fn draw(&self) {
-        for vertex in self.vertex_vec.iter() {
-            vertex.draw()
-        }
         for edge in self.edge_vec.iter() {
             edge.draw()
         }
-    }    
-
+        for vertex in self.vertex_vec.iter() {
+            vertex.draw()
+        }
+    }
+  
     pub fn init(&mut self, w:usize, h: usize)
     {
         //let mut vertex_grid: Vec<Vec<Option<*mut Vertex>>> = vec![vec![None; w]; h];
 
-        for i in 1..w{
-            for j in 1..h{
-                let i_ = f32::from(i as i16 * 10);
-                let j_ = f32::from(j as i16 * 10);
+        for j in 0..h{
+            for i in 0..w{
+                let i_ = f32::from(i as i16 * 30);
+                let j_ = f32::from(j as i16 * 30);
                 let mut v: Vertex = Vertex { pos: Vec3 { x: i_, y: j_, z: 0.0 } };
                 self.vertex_vec.push(v);
                 
                 let mut prev_vec: Vertex;
 
-                if i > 1 {
+                if i > 0 {
                     prev_vec = self.vertex_vec[(j * w) + i - 1];  
                     self.edge_vec.push(Edge{v1:v, v2: prev_vec})
                 }
-                if j > 1 {
+                if j > 0 {
                     prev_vec = self.vertex_vec[((j-1) * w) + i]; 
                     self.edge_vec.push(Edge{v1:v, v2: prev_vec})  
                 }
-                if i > 1 && j > 1 {
+                if i > 0 && j > 0 {
                     prev_vec = self.vertex_vec[((j-1) * w) + i - 1];    
                     self.edge_vec.push(Edge{v1:v, v2: prev_vec})
                 }
-                
-                //vertex_grid[i][j] = Some(&mut v);
+                if j > 0 && i < w - 1 {
+                    prev_vec = self.vertex_vec[((j-1) * w) + i + 1];    
+                    self.edge_vec.push(Edge{v1:v, v2: prev_vec})
+                }
             }
-        }
+        }   
     }
     
 }
@@ -70,6 +72,6 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn draw(&self) {
-        draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 15.0, YELLOW);
+        draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 5.0, YELLOW);
     }
 }
