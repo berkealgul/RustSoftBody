@@ -18,12 +18,9 @@ async fn main() {
         //draw_circle(screen_width() - 30.0, screen_height() - 30.0, 15.0, YELLOW);
         //draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);
 
-
         mesh.draw();
         mesh.physics_step(0.001);
 
-
-        next_frame().await
-        
+        next_frame().await        
     }
 }
