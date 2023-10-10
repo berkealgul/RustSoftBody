@@ -8,7 +8,7 @@ use soft_structure::*;
 async fn main() {
     let mut mesh = SoftMesh{vertex_vec: vec!{}, edge_vec: vec!{}};
 
-    mesh.init(5, 5);
+    mesh.init(1, 2, Vec3{x:50.0, y:20.0, z:0.0}, 30);
 
     loop {
         clear_background(RED);

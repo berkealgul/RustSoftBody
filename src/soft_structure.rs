@@ -1,55 +1,63 @@
 use macroquad::prelude::*;
-use core::cell::RefCell;
-use std::rc::Rc;
-use std::borrow::BorrowMut;
 //use mod math::
 
 #[derive(Debug, Clone)]
 pub struct SoftMesh
 {
-    pub vertex_vec: Vec<Rc<RefCell<Vertex>>>,
+    pub vertex_vec: Vec<Vertex>,
     pub edge_vec: Vec<Edge>
 }
 
 impl SoftMesh  {
     pub fn physics_step(&mut self, dt:f32) {
-        for edge in self.edge_vec.iter_mut() {
-            edge.physics_step()
+        for edge in self.edge_vec.iter() {
+            let v1 = self.vertex_vec[edge.v1_idx];
+            let v2 = self.vertex_vec[edge.v2_idx];
+            let I: Vec3 = v2.pos - v1.pos;
+            let F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
+            self.vertex_vec[edge.v1_idx].add_force(F); 
+            self.vertex_vec[edge.v2_idx].add_force(-F);
         }
         for vertex in self.vertex_vec.iter_mut() {
-            vertex.borrow().physics_step(dt)
+            let g = vertex.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
+            vertex.f += g;// add gravity to total force
+            vertex.a = vertex.f / vertex.m;
+            vertex.v += vertex.a * dt;
+            vertex.pos += vertex.v * dt; 
         }
     }
 
     pub fn draw(&self) {
         for edge in self.edge_vec.iter() {
-            edge.draw()
+            let v1 = self.vertex_vec[edge.v1_idx];
+            let v2 = self.vertex_vec[edge.v2_idx];
+            draw_line(v1.pos.x, v1.pos.y, v2.pos.x, v2.pos.y, 2.0, BLACK);
         }
         for vertex in self.vertex_vec.iter() {
-            vertex.borrow().draw()
+            vertex.draw()
         }
     }
   
-    pub fn init(&mut self, w:usize, h: usize)
+    pub fn init(&mut self, w:usize, h: usize, initial_pos:Vec3, offset:i16)
     {
         for j in 0..h{
             for i in 0..w{
-                let i_ = f32::from(i as i16 * 30);
-                let j_ = f32::from(j as i16 * 30);
-                let v: Rc<RefCell<Vertex>> = Vertex::create_vertex(i_, j_);
+                let i_ = f32::from(i as i16 * offset) + initial_pos.x;
+                let j_ = f32::from(j as i16 * offset) + initial_pos.y;
+                let v: Vertex = Vertex::create_vertex(i_, j_);
                 self.vertex_vec.push(v);
 
                 if i > 0 {
-                    self.edge_vec.push(Edge::create_edge(v, self.vertex_vec[(j * w) + i - 1]))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, (j * w) + i - 1, &self.vertex_vec))
                 }
                 if j > 0 {
-                    self.edge_vec.push(Edge::create_edge(v, self.vertex_vec[((j-1) * w) + i]))  
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i, &self.vertex_vec)) 
                 }
                 if i > 0 && j > 0 {   
-                    self.edge_vec.push(Edge::create_edge(v, self.vertex_vec[((j-1) * w) + i - 1]))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i - 1, &self.vertex_vec))
                 }
                 if j > 0 && i < w - 1 {
-                    self.edge_vec.push(Edge::create_edge(v, self.vertex_vec[((j-1) * w) + i + 1]))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i + 1, &self.vertex_vec))
                 }
             }
         }   
@@ -59,27 +67,16 @@ impl SoftMesh  {
 
 #[derive(Debug, Clone)]
 pub struct Edge {
-    pub v1: Rc<RefCell<Vertex>>,
-    pub v2: Rc<RefCell<Vertex>>,
+    pub v1_idx: usize,
+    pub v2_idx: usize,
     pub L:  f32,
     pub K: f32
 }
 
 impl Edge {
-    pub fn draw(&self) {
-        draw_line(self.v1.borrow().pos.x, self.v1.borrow().pos.y, self.v2.borrow().pos.x, self.v2.borrow().pos.y, 2.0, BLACK);
-    }
-
-    pub fn physics_step(&mut self) {
-        let I: Vec3 = self.v2.borrow().pos - self.v1.borrow().pos;
-        let F: Vec3 = -self.K * (I - self.L * (I / I.length())); 
-        self.v1.borrow_mut().add_force(F); 
-        self.v2.borrow_mut().add_force(-F);
-    }
-
-    pub fn create_edge(v1:Rc<RefCell<Vertex>>, v2:Rc<RefCell<Vertex>>) -> Edge {
-        let L = (v1.borrow().pos - v1.borrow().pos).length();
-        Edge{v1:v1, v2:v2, L:L, K:5.0}
+    pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>) -> Edge {
+        let L = (vertex_vec[v2_idx].pos - vertex_vec[v1_idx].pos).length();
+        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:5.0}
     }
 }
  
@@ -97,20 +94,12 @@ impl Vertex {
         draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 5.0, YELLOW);
     }
 
-    pub fn physics_step(&mut self, dt: f32) {
-        let g = self.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
-        self.f += g;// add gravity to total force
-        self.a = self.f / self.m;
-        self.v += self.a * dt;
-        self.pos += self.v * dt; 
-    }
-
-    pub fn create_vertex(x: f32, y: f32) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Vertex {pos: Vec3 { x: x, y: y, z: 0.0 }, 
+    pub fn create_vertex(x: f32, y: f32) -> Self {
+        Vertex {pos: Vec3 { x: x, y: y, z: 0.0 }, 
                 f: Vec3::ZERO, 
                 v: Vec3::ZERO,
                 a: Vec3::ZERO,
-                m: 1.0}))
+                m: 1.0}
     }
 
     pub fn add_force(&mut self, f:Vec3) {
