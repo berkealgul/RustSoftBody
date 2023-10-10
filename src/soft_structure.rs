@@ -15,15 +15,17 @@ impl SoftMesh  {
             let v2 = self.vertex_vec[edge.v2_idx];
             let I: Vec3 = v2.pos - v1.pos;
             let F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
-            self.vertex_vec[edge.v1_idx].add_force(F); 
-            self.vertex_vec[edge.v2_idx].add_force(-F);
+            self.vertex_vec[edge.v1_idx].add_force(-F); 
+            self.vertex_vec[edge.v2_idx].add_force(F);
         }
+
         for vertex in self.vertex_vec.iter_mut() {
             let g = vertex.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
             vertex.f += g;// add gravity to total force
             vertex.a = vertex.f / vertex.m;
             vertex.v += vertex.a * dt;
             vertex.pos += vertex.v * dt; 
+            vertex.f = Vec3::ZERO;
         }
     }
 
