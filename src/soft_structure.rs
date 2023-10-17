@@ -20,8 +20,13 @@ impl SoftMesh  {
         }
 
         for vertex in self.vertex_vec.iter_mut() {
+            if vertex.pos.y > 400.0 {
+                vertex.add_force(Vec3 { x: (0.0), y: (-100.0), z: (0.0) })
+            }
+
             let g = vertex.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
-            vertex.f += g;// add gravity to total force
+            vertex.add_force(g);// add gravity to total force
+            vertex.add_force(-vertex.c * vertex.v); // damping force
             vertex.a = vertex.f / vertex.m;
             vertex.v += vertex.a * dt;
             vertex.pos += vertex.v * dt; 
@@ -89,6 +94,7 @@ pub struct Vertex {
     pub m: f32,
     pub v: Vec3,
     pub a: Vec3, 
+    pub c: f32
 }
 
 impl Vertex {
@@ -101,7 +107,8 @@ impl Vertex {
                 f: Vec3::ZERO, 
                 v: Vec3::ZERO,
                 a: Vec3::ZERO,
-                m: 1.0}
+                m: 1.0,
+                c: 0.5}
     }
 
     pub fn add_force(&mut self, f:Vec3) {
