@@ -16,12 +16,6 @@ impl SoftMesh  {
             let v2 = self.vertex_vec[edge.v2_idx];
             let I: Vec3 = v2.pos - v1.pos;
             let mut F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
-            
-            // if min len is lower we multiply force to prevent crash into eachother
-            // if I.length() < edge.min_L {
-            //     F *= 2.0
-            // }
-
             self.vertex_vec[edge.v1_idx].add_force(-F); 
             self.vertex_vec[edge.v2_idx].add_force(F);
         }
@@ -104,13 +98,12 @@ pub struct Edge {
     pub v2_idx: usize,
     pub L:  f32,
     pub K: f32,
-    pub min_L: f32
 }
 
 impl Edge {
     pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>) -> Edge {
         let L = (vertex_vec[v2_idx].pos - vertex_vec[v1_idx].pos).length();
-        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:15.0, min_L: 0.1}
+        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:15.0}
     }
 }
  
