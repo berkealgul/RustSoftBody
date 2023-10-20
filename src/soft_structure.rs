@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-//use mod math::
+use crate::collisions::*;
 
 #[derive(Debug, Clone)]
 pub struct SoftMesh
@@ -9,28 +9,54 @@ pub struct SoftMesh
 }
 
 impl SoftMesh  {
-    pub fn physics_step(&mut self, dt:f32) {
+    pub fn physics_step(&mut self, dt:f32, static_colliders:&Vec<StaticCollider>) {
+        // step 1: calculate forces applied by springs(edge) and add them to vertices
         for edge in self.edge_vec.iter() {
             let v1 = self.vertex_vec[edge.v1_idx];
             let v2 = self.vertex_vec[edge.v2_idx];
             let I: Vec3 = v2.pos - v1.pos;
-            let F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
+            let mut F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
+            
+            // if min len is lower we multiply force to prevent crash into eachother
+            // if I.length() < edge.min_L {
+            //     F *= 2.0
+            // }
+
             self.vertex_vec[edge.v1_idx].add_force(-F); 
             self.vertex_vec[edge.v2_idx].add_force(F);
         }
 
+        // step 2 update each vertex
         for vertex in self.vertex_vec.iter_mut() {
-            if vertex.pos.y > 400.0 {
-                vertex.add_force(Vec3 { x: (0.0), y: (-100.0), z: (0.0) })
-            }
-
+            // step 2.a update vertex v and a
             let g = vertex.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
             vertex.add_force(g);// add gravity to total force
             vertex.add_force(-vertex.c * vertex.v); // damping force
             vertex.a = vertex.f / vertex.m;
             vertex.v += vertex.a * dt;
+
+            // step 2.b check for collisions with static colliders and handle collision
+            for collider in static_colliders {
+                let c12 = collider.v2 - collider.v1;
+                let cv = collider.v1 - vertex.pos;
+                let d = (c12.x * cv.y - cv.x * c12.y).abs() / c12.length();
+                
+                let cv1 = collider.v1 - vertex.pos;
+                let cv2 = collider.v2 - vertex.pos;
+
+                // handle collision
+                if d <= 5.0 && cv1.dot(cv2) < 0.0 {
+                    let v = vertex.v.normalize();
+                    let vx = vertex.v.length();
+                    let w = (v -  2.0 * v.dot(collider.n) * collider.n);
+                    vertex.v = w * vx;
+                    break
+                }
+            }
+
+            //step 2.c update pos 
             vertex.pos += vertex.v * dt; 
-            vertex.f = Vec3::ZERO;
+            vertex.f = Vec3::ZERO; // reset force for next update step
         }
     }
 
@@ -77,13 +103,14 @@ pub struct Edge {
     pub v1_idx: usize,
     pub v2_idx: usize,
     pub L:  f32,
-    pub K: f32
+    pub K: f32,
+    pub min_L: f32
 }
 
 impl Edge {
     pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>) -> Edge {
         let L = (vertex_vec[v2_idx].pos - vertex_vec[v1_idx].pos).length();
-        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:5.0}
+        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:15.0, min_L: 0.1}
     }
 }
  
@@ -108,7 +135,7 @@ impl Vertex {
                 v: Vec3::ZERO,
                 a: Vec3::ZERO,
                 m: 1.0,
-                c: 0.5}
+                c: 1.0}
     }
 
     pub fn add_force(&mut self, f:Vec3) {
