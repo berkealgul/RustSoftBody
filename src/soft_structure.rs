@@ -16,9 +16,12 @@ impl SoftMesh  {
             let v2 = self.vertex_vec[edge.v2_idx];
             let I: Vec3 = v2.pos - v1.pos;
             let mut F: Vec3 = -edge.K * (I - edge.L * (I / I.length())); 
+
             self.vertex_vec[edge.v1_idx].add_force(-F); 
             self.vertex_vec[edge.v2_idx].add_force(F);
         }
+
+        let vertex_vec_copy = self.vertex_vec.clone();
 
         // step 2 update each vertex
         for vertex in self.vertex_vec.iter_mut() {
@@ -28,6 +31,20 @@ impl SoftMesh  {
             vertex.add_force(-vertex.c * vertex.v); // damping force
             vertex.a = vertex.f / vertex.m;
             vertex.v += vertex.a * dt;
+            
+            // step 2.b check for collisions with other vertices
+            for v2 in vertex_vec_copy.iter() {
+                let dv = v2.pos - vertex.pos;
+                let d = dv.length();
+                if(d == 0.0) {
+                    continue;
+                }
+
+                // if(d < 10.0 && dv.dot(vertex.v) > 0.0) {
+                //    vertex.v = -vertex.v.length() * dv.normalize();
+                //    break;
+                // } 
+            }
 
             // step 2.b check for collisions with static colliders and handle collision
             for collider in static_colliders {
@@ -103,13 +120,13 @@ pub struct Edge {
 impl Edge {
     pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>) -> Edge {
         let L = (vertex_vec[v2_idx].pos - vertex_vec[v1_idx].pos).length();
-        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:15.0}
+        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:10.0}
     }
 }
  
 #[derive(Debug, Clone, Copy)]
 pub struct Vertex {
-    pub pos: Vec3,
+    pub pos: Vec3,  
     pub f: Vec3,
     pub m: f32,
     pub v: Vec3,
@@ -119,7 +136,7 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn draw(&self) {
-        draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 5.0, YELLOW);
+        draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 3.0, YELLOW);
     }
 
     pub fn create_vertex(x: f32, y: f32) -> Self {

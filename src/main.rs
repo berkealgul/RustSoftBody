@@ -10,7 +10,7 @@ use collisions::*;
 async fn main() {
     let mut mesh = SoftMesh{vertex_vec: vec!{}, edge_vec: vec!{}};
 
-    mesh.init(5, 10, Vec3{x:50.0, y:20.0, z:0.0}, 30);
+    mesh.init(5, 10, Vec3{x:50.0, y:20.0, z:0.0}, 20);
 
     let mut colliders:Vec<StaticCollider> = vec!{};
  
@@ -29,7 +29,7 @@ async fn main() {
         for c in colliders.iter() {
             c.draw()
         }
-        mesh.physics_step(0.1, &colliders);
+        mesh.physics_step(0.05, &colliders);
 
         next_frame().await        
     }
