@@ -4,6 +4,10 @@ use crate::collisions::*;
 #[derive(Debug, Clone)]
 pub struct SoftMesh
 {
+    pub w: usize,
+    pub h: usize,
+    pub particle_mass: f32,
+    pub K: f32,
     pub vertex_vec: Vec<Vertex>,
     pub edge_vec: Vec<Edge>
 }
@@ -21,10 +25,14 @@ impl SoftMesh  {
             self.vertex_vec[edge.v2_idx].add_force(F);
         }
 
-        let vertex_vec_copy = self.vertex_vec.clone();
+        //let vertex_vec_copy = self.vertex_vec.clone();
 
         // step 2 update each vertex
         for vertex in self.vertex_vec.iter_mut() {
+            if(vertex.is_static) { // skip static vertices
+                continue;
+            }
+
             // step 2.a update vertex v and a
             let g = vertex.m * Vec3{x: 0.0, y: 9.8, z:0.0}; // downwards is +y
             vertex.add_force(g);// add gravity to total force
@@ -32,19 +40,20 @@ impl SoftMesh  {
             vertex.a = vertex.f / vertex.m;
             vertex.v += vertex.a * dt;
             
+            // NOT WORKING
             // step 2.b check for collisions with other vertices
-            for v2 in vertex_vec_copy.iter() {
-                let dv = v2.pos - vertex.pos;
-                let d = dv.length();
-                if(d == 0.0) {
-                    continue;
-                }
+            // for v2 in vertex_vec_copy.iter() {
+            //     let dv = v2.pos - vertex.pos;
+            //     let d = dv.length();
+            //     if(d == 0.0) {
+            //         continue;
+            //     }
 
-                // if(d < 10.0 && dv.dot(vertex.v) > 0.0) {
-                //    vertex.v = -vertex.v.length() * dv.normalize();
-                //    break;
-                // } 
-            }
+            //     if(d < 3.0 && dv.dot(vertex.v) > 0.0) {
+            //        vertex.v -= vertex.v.length() * dv.normalize();
+            //        break;
+            //     } 
+            // }
 
             // step 2.b check for collisions with static colliders and handle collision
             for collider in static_colliders {
@@ -56,7 +65,7 @@ impl SoftMesh  {
                 let cv2 = collider.v2 - vertex.pos;
 
                 // handle collision
-                if d <= 5.0 && cv1.dot(cv2) < 0.0 {
+                if d <= 6.0 && cv1.dot(cv2) < 0.0 {
                     let v = vertex.v.normalize();
                     let vx = vertex.v.length();
                     let w = (v -  2.0 * v.dot(collider.n) * collider.n);
@@ -84,27 +93,48 @@ impl SoftMesh  {
   
     pub fn init(&mut self, w:usize, h: usize, initial_pos:Vec3, offset:i16)
     {
+        self.w = w;
+        self.h = h;
+
         for j in 0..h{
             for i in 0..w{
                 let i_ = f32::from(i as i16 * offset) + initial_pos.x;
                 let j_ = f32::from(j as i16 * offset) + initial_pos.y;
-                let v: Vertex = Vertex::create_vertex(i_, j_);
+                let v: Vertex = Vertex::create_vertex(i_, j_, self.particle_mass);
                 self.vertex_vec.push(v);
 
                 if i > 0 {
-                    self.edge_vec.push(Edge::create_edge((j * w) + i, (j * w) + i - 1, &self.vertex_vec))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, (j * w) + i - 1, &self.vertex_vec, self.K))
                 }
                 if j > 0 {
-                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i, &self.vertex_vec)) 
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i, &self.vertex_vec, self.K)) 
                 }
                 if i > 0 && j > 0 {   
-                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i - 1, &self.vertex_vec))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i - 1, &self.vertex_vec, self.K))
                 }
                 if j > 0 && i < w - 1 {
-                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i + 1, &self.vertex_vec))
+                    self.edge_vec.push(Edge::create_edge((j * w) + i, ((j-1) * w) + i + 1, &self.vertex_vec, self.K))
                 }
             }
         }   
+    }
+
+    pub fn change_static_state_of_vertex(&mut self, i: usize, j: usize, state:bool) 
+    {
+        self.vertex_vec[(j * self.w) + i].is_static = state;
+    }
+
+    pub fn create_mesh(w:usize, h: usize, initial_pos:Vec3, offset:i16, particle_mass:f32, K:f32) -> Self 
+    {
+        let mut mesh = SoftMesh{vertex_vec: vec!{}, 
+                                        edge_vec: vec!{}, 
+                                        w: 0, 
+                                        h: 0, 
+                                        particle_mass:particle_mass,
+                                        K:K};
+
+        mesh.init(w, h, initial_pos, offset);
+        return mesh;
     }
     
 }
@@ -118,9 +148,9 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>) -> Edge {
+    pub fn create_edge(v1_idx:usize, v2_idx:usize, vertex_vec: &Vec<Vertex>, K:f32) -> Edge {
         let L = (vertex_vec[v2_idx].pos - vertex_vec[v1_idx].pos).length();
-        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:10.0}
+        Edge{v1_idx:v1_idx, v2_idx:v2_idx, L:L, K:K}
     }
 }
  
@@ -131,7 +161,8 @@ pub struct Vertex {
     pub m: f32,
     pub v: Vec3,
     pub a: Vec3, 
-    pub c: f32
+    pub c: f32,
+    pub is_static: bool
 }
 
 impl Vertex {
@@ -139,13 +170,14 @@ impl Vertex {
         draw_circle(f32::from(self.pos.x), f32::from(self.pos.y), 3.0, YELLOW);
     }
 
-    pub fn create_vertex(x: f32, y: f32) -> Self {
+    pub fn create_vertex(x: f32, y: f32, m:f32) -> Self {
         Vertex {pos: Vec3 { x: x, y: y, z: 0.0 }, 
                 f: Vec3::ZERO, 
                 v: Vec3::ZERO,
                 a: Vec3::ZERO,
-                m: 1.0,
-                c: 1.0}
+                m: m,
+                c: 1.0,
+                is_static: false}
     }
 
     pub fn add_force(&mut self, f:Vec3) {

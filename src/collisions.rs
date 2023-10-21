@@ -31,7 +31,7 @@ impl StaticCollider
 
     pub fn draw(&self) 
     {
-        draw_line(self.v1.x, self.v1.y, self.v2.x, self.v2.y, 3.0, BLACK);
+        draw_line(self.v1.x, self.v1.y, self.v2.x, self.v2.y, 5.0, BLACK);
 
         // draw normal line
         // let m = Vec3{
