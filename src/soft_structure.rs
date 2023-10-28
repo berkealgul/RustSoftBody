@@ -184,3 +184,25 @@ impl Vertex {
         self.f += f;
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct SoftBubble
+{
+    pub particle_mass: f32,
+    pub K: f32,
+    pub vertex_vec: Vec<Vertex>,
+    pub edge_vec: Vec<Edge>
+}
+
+impl SoftBubble {
+    
+    pub fn init(&mut self, r:f32, initial_pos:Vec3, offset:i16)
+    {
+    
+    }
+
+    pub fn create_bubble() -> Self {
+        SoftBubble { particle_mass: (), K: (), vertex_vec: (), edge_vec: () }
+    }
+    
+}
