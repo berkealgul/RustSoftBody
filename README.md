@@ -1,4 +1,4 @@
-#### RustSoftBody
+RustSoftBody
 
 Soft body simulation with rust
 
